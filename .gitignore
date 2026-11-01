@@ -1,0 +1,29 @@
+# OS / editör
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+~$*
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+*.iml
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist/
+coverage/
+
+# Ortam değişkenleri / gizli bilgiler
+.env
+.env.*
+!.env.example
+*.pem
+*.key
