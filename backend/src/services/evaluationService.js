@@ -43,7 +43,10 @@ function validateScores(input, criteria) {
       throw new HttpError(400, `${where}.score must be a whole number between 0 and 100`);
     }
     if (comment !== null && (typeof comment !== 'string' || comment.length > MAX_COMMENT_LENGTH)) {
-      throw new HttpError(400, `${where}.comment must be text of at most ${MAX_COMMENT_LENGTH} characters`);
+      throw new HttpError(
+        400,
+        `${where}.comment must be text of at most ${MAX_COMMENT_LENGTH} characters`
+      );
     }
     return { criteriaId, score, comment: comment === null ? null : comment.trim() || null };
   });
@@ -103,9 +106,17 @@ async function saveStudentEvaluation(juryId, projectId, studentId, body) {
       throw new HttpError(404, 'Student is not a member of this project');
     }
 
-    const existing = await evaluationRepository.lockStudentRows(client, juryId, projectId, studentId);
+    const existing = await evaluationRepository.lockStudentRows(
+      client,
+      juryId,
+      projectId,
+      studentId
+    );
     if (existing.some((row) => row.is_submitted)) {
-      throw new HttpError(409, 'Scores for this student have already been submitted and are locked');
+      throw new HttpError(
+        409,
+        'Scores for this student have already been submitted and are locked'
+      );
     }
 
     if (submit) {

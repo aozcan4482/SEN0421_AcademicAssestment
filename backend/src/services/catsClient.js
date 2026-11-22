@@ -38,7 +38,7 @@ async function verifyLive(username, password) {
   return response.status === 302;
 }
 
-async function verifyMock(username, password) {
+async function verifyMock(_username, password) {
   return config.cats.mockPassword !== '' && password === config.cats.mockPassword;
 }
 

@@ -1,0 +1,121 @@
+# Continuous integration: every push and pull request to main is checked
+# automatically. A pull request should be merged only when all jobs pass.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, format, migrations, tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: aams_app
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: academic_assessment
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aams_app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: academic_assessment
+      DB_USER: aams_app
+      DB_PASSWORD: ci_password
+      PGPASSWORD: ci_password
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
+      - name: Apply database migrations and seed data
+        shell: pwsh
+        run: ../database/scripts/migrate.ps1 -WithSeed
+
+      - name: Re-run migrations (must be a no-op)
+        shell: pwsh
+        run: ../database/scripts/migrate.ps1
+
+      - name: Run tests (unit + integration)
+        run: npm test -- --ci
+
+      - name: Verify audit log integrity after tests
+        run: |
+          result=$(psql -h localhost -U aams_app -d academic_assessment -tAc "SELECT verify_audit_chain() IS NULL")
+          echo "Audit chain intact: $result"
+          test "$result" = "t"
+
+  mobile:
+    name: Mobile (analyze, tests)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The job is skipped until the Flutter application exists in mobile/.
+      - name: Detect Flutter project
+        id: detect
+        working-directory: .
+        run: |
+          if [ -f mobile/pubspec.yaml ]; then echo "present=true" >> "$GITHUB_OUTPUT"
+          else echo "present=false" >> "$GITHUB_OUTPUT"; echo "No Flutter project yet - skipping."; fi
+
+      - uses: subosito/flutter-action@v2
+        if: steps.detect.outputs.present == 'true'
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        if: steps.detect.outputs.present == 'true'
+        run: flutter pub get
+
+      - name: Check formatting
+        if: steps.detect.outputs.present == 'true'
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Static analysis
+        if: steps.detect.outputs.present == 'true'
+        run: flutter analyze
+
+      - name: Run tests
+        if: steps.detect.outputs.present == 'true'
+        run: flutter test
