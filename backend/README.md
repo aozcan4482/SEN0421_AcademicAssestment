@@ -14,8 +14,11 @@ backend/
     routes/            URL -> controller mapping
     controllers/       HTTP layer: reads the request, sends the response
     repositories/      SQL only (parameterised queries)
-    middleware/        Cross-cutting concerns (errors; later auth, RBAC)
+    services/          Business rules (authentication, CATS client, audit)
+    middleware/        Cross-cutting concerns: authentication, authorisation,
+                       rate limiting, error handling
     utils/             Shared helpers (HttpError)
+  scripts/             Maintenance commands (set-admin-password)
 ```
 
 A request flows `route → controller → (service) → repository → database`.
@@ -32,18 +35,57 @@ without editing existing ones.
 ```powershell
 cd backend
 npm install
-copy .env.example .env      # then set DB_PASSWORD in .env
+copy .env.example .env      # then fill in DB_PASSWORD and JWT_SECRET
 npm run dev                 # restarts automatically on file changes
 ```
 
 `npm start` runs the server without auto-restart.
 
+Generate a `JWT_SECRET`:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Set the administrator's local password (typed interactively, stored as a
+bcrypt hash):
+
+```powershell
+npm run set-admin-password -- admin
+```
+
+## Authentication and authorisation
+
+| Account | Signs in with | Notes |
+|---|---|---|
+| Admin | Local password (bcrypt) | Works even when CATS is unreachable |
+| Jury, Student | CATS credentials | CATS password is forwarded once, never stored or logged. The user must also be registered in the system, which assigns the role |
+
+A successful login returns a signed JWT. Send it on every protected request:
+`Authorization: Bearer <token>`.
+
+- `requireRole(...)` restricts a route to the given roles.
+- `requireJuryAssignment()` lets a jury member act only on projects assigned
+  to them.
+- Failed logins are rate-limited per IP address (default 10 per 15 minutes).
+- Logins, failed logins and denied requests are written to the immutable
+  audit log; evaluation changes are logged by a database trigger.
+
+**Development without CATS accounts:** set `CATS_MODE=mock` and
+`CATS_MOCK_PASSWORD` in `.env`; every registered jury/student account then
+signs in with that password. The server refuses to start in mock mode when
+`NODE_ENV=production`.
+
 ## Endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/health` | `200` if the API and database are up, `503` if the database is unreachable |
-| GET | `/api/criteria` | Evaluation criteria and their weights |
+| Method | Path | Access | Description |
+|---|---|---|---|
+| GET | `/api/health` | Public | `200` if the API and database are up, `503` if not |
+| POST | `/api/auth/login` | Public | `{ username, password }` → `{ token, user }` |
+| GET | `/api/auth/me` | Signed in | Profile of the signed-in user |
+| GET | `/api/criteria` | Signed in | Evaluation criteria and their weights |
+| GET | `/api/admin/audit-log` | Admin | Audit entries, newest first (`?limit=&before=`) |
+| GET | `/api/admin/audit-log/verify` | Admin | Recomputes the hash chain; `intact: false` reveals tampering |
 
 Errors are always returned as `{ "error": "<message>" }`. Internal details
 (SQL errors, stack traces) are logged on the server and never sent to the client.
@@ -52,5 +94,4 @@ Errors are always returned as `{ "error": "<message>" }`. Internal details
 
 ```powershell
 curl http://localhost:3000/api/health
-curl http://localhost:3000/api/criteria
 ```

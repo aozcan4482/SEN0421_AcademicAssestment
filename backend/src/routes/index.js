@@ -8,10 +8,18 @@
 const express = require('express');
 const healthController = require('../controllers/healthController');
 const criteriaController = require('../controllers/criteriaController');
+const authenticate = require('../middleware/authenticate');
+const authRoutes = require('./auth.routes');
+const adminRoutes = require('./admin.routes');
 
 const router = express.Router();
 
+// Public
 router.get('/health', healthController.check);
-router.get('/criteria', criteriaController.list);
+router.use('/auth', authRoutes);
+
+// Authenticated
+router.get('/criteria', authenticate, criteriaController.list);
+router.use('/admin', adminRoutes);
 
 module.exports = router;
