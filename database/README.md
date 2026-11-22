@@ -55,6 +55,9 @@ If PowerShell blocks the script, allow local scripts for the current session:
 | Only a member of the project can be scored | FK `evaluations_student_is_member` → `project_members` |
 | Criterion weight between 0 and 1 | `CHECK` on `criteria.weight` |
 | Weights of all criteria sum to 1.0 | Deferred constraint trigger `trg_criteria_weight_total` (checked at `COMMIT`) |
+| Audit log entries cannot be changed or deleted | Triggers reject `UPDATE`, `DELETE`, `TRUNCATE` on `audit_log` |
+| Tampering with the audit log is detectable | SHA-256 hash chain; `SELECT verify_audit_chain();` returns the first broken entry or `NULL` |
+| Every evaluation change is logged, even outside the API | Trigger `trg_evaluations_audit` on `evaluations` |
 | Deleting a project removes its members, assignments, evaluations and results | `ON DELETE CASCADE` |
 
 ## Reset (development only)

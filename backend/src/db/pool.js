@@ -53,4 +53,21 @@ async function withTransaction(work) {
   }
 }
 
-module.exports = { pool, query, withTransaction };
+/**
+ * Like withTransaction, but also tells the database who is acting.
+ * Database triggers read this value and write it to the audit log, so every
+ * change made through the API is attributed to the authenticated user.
+ * The setting is local to the transaction and disappears at COMMIT/ROLLBACK.
+ * @param {number} userId
+ * @param {(client: import('pg').PoolClient) => Promise<T>} work
+ * @returns {Promise<T>}
+ * @template T
+ */
+function withActor(userId, work) {
+  return withTransaction(async (client) => {
+    await client.query("SELECT set_config('app.current_user_id', $1, true)", [String(userId)]);
+    return work(client);
+  });
+}
+
+module.exports = { pool, query, withTransaction, withActor };
