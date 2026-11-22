@@ -56,10 +56,10 @@ npm run set-admin-password -- admin
 
 ## Authentication and authorisation
 
-| Account | Signs in with | Notes |
-|---|---|---|
-| Admin | Local password (bcrypt) | Works even when CATS is unreachable |
-| Jury, Student | CATS credentials | CATS password is forwarded once, never stored or logged. The user must also be registered in the system, which assigns the role |
+| Account       | Signs in with           | Notes                                                                                                                           |
+| ------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Admin         | Local password (bcrypt) | Works even when CATS is unreachable                                                                                             |
+| Jury, Student | CATS credentials        | CATS password is forwarded once, never stored or logged. The user must also be registered in the system, which assigns the role |
 
 A successful login returns a signed JWT. Send it on every protected request:
 `Authorization: Bearer <token>`.
@@ -78,17 +78,17 @@ signs in with that password. The server refuses to start in mock mode when
 
 ## Endpoints
 
-| Method | Path | Access | Description |
-|---|---|---|---|
-| GET | `/api/health` | Public | `200` if the API and database are up, `503` if not |
-| POST | `/api/auth/login` | Public | `{ username, password }` → `{ token, user }` |
-| GET | `/api/auth/me` | Signed in | Profile of the signed-in user |
-| GET | `/api/criteria` | Signed in | Evaluation criteria and their weights |
-| GET | `/api/jury/projects` | Jury | Projects assigned to the jury member, with member progress |
-| GET | `/api/jury/projects/:projectId` | Jury (assigned) | Project, criteria and the jury member's own scores per student |
-| PUT | `/api/jury/projects/:projectId/students/:studentId/evaluation` | Jury (assigned) | Save a student's scores as draft, or submit them with `"submit": true` |
-| GET | `/api/admin/audit-log` | Admin | Audit entries, newest first (`?limit=&before=`) |
-| GET | `/api/admin/audit-log/verify` | Admin | Recomputes the hash chain; `intact: false` reveals tampering |
+| Method | Path                                                           | Access          | Description                                                            |
+| ------ | -------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------- |
+| GET    | `/api/health`                                                  | Public          | `200` if the API and database are up, `503` if not                     |
+| POST   | `/api/auth/login`                                              | Public          | `{ username, password }` → `{ token, user }`                           |
+| GET    | `/api/auth/me`                                                 | Signed in       | Profile of the signed-in user                                          |
+| GET    | `/api/criteria`                                                | Signed in       | Evaluation criteria and their weights                                  |
+| GET    | `/api/jury/projects`                                           | Jury            | Projects assigned to the jury member, with member progress             |
+| GET    | `/api/jury/projects/:projectId`                                | Jury (assigned) | Project, criteria and the jury member's own scores per student         |
+| PUT    | `/api/jury/projects/:projectId/students/:studentId/evaluation` | Jury (assigned) | Save a student's scores as draft, or submit them with `"submit": true` |
+| GET    | `/api/admin/audit-log`                                         | Admin           | Audit entries, newest first (`?limit=&before=`)                        |
+| GET    | `/api/admin/audit-log/verify`                                  | Admin           | Recomputes the hash chain; `intact: false` reveals tampering           |
 
 ### Score entry
 
@@ -118,3 +118,28 @@ Errors are always returned as `{ "error": "<message>" }`. Internal details
 ```powershell
 curl http://localhost:3000/api/health
 ```
+
+## Scoring
+
+A jury member's total for a student is the weighted sum of their criterion
+scores (weights sum to 1.0, so totals are on the 0–100 scale). The final score
+is the mean of the totals of all jury members who submitted a complete set,
+rounded to two decimals. Drafts and incomplete sets are not counted. Results
+can be calculated only after every assigned jury member has submitted.
+
+## Code quality and tests
+
+```powershell
+npm run lint            # ESLint
+npm run format:check    # Prettier (npm run format fixes formatting)
+npm run test:unit       # unit tests, no database needed
+npm test                # unit + integration tests (needs the database)
+```
+
+Integration tests run against the database configured in `.env`. They create
+their own uniquely named users and project and remove them afterwards, so
+they can be run repeatedly. CATS is always mocked during tests.
+
+The same checks run automatically on GitHub Actions for every push and pull
+request to `main` (`.github/workflows/ci.yml`), against a fresh PostgreSQL
+database migrated with `database/scripts/migrate.ps1`.

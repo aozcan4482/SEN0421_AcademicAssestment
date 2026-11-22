@@ -78,7 +78,8 @@ async function login(username, password) {
       throw Object.assign(new HttpError(401, INVALID_CREDENTIALS), { reason: 'admin_no_password' });
     }
     const ok = await loginLocal(user, password);
-    if (!ok) throw Object.assign(new HttpError(401, INVALID_CREDENTIALS), { reason: 'bad_password' });
+    if (!ok)
+      throw Object.assign(new HttpError(401, INVALID_CREDENTIALS), { reason: 'bad_password' });
     return { token: issueToken(user), user: toPublicUser(user) };
   }
 
@@ -86,7 +87,10 @@ async function login(username, password) {
   if (!result.user) {
     if (result.reason === 'not_registered') {
       throw Object.assign(
-        new HttpError(403, 'Your account is not registered in this system. Contact the administrator.'),
+        new HttpError(
+          403,
+          'Your account is not registered in this system. Contact the administrator.'
+        ),
         { reason: result.reason }
       );
     }

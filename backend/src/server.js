@@ -8,7 +8,9 @@ const { pool } = require('./db/pool');
 const app = createApp();
 
 const server = app.listen(config.server.port, config.server.host, () => {
-  console.log(`API listening on http://${config.server.host}:${config.server.port} (${config.env})`);
+  console.log(
+    `API listening on http://${config.server.host}:${config.server.port} (${config.env})`
+  );
 });
 
 // On Ctrl+C or a stop signal: stop accepting requests, let running ones

@@ -41,8 +41,12 @@ function createPrompt() {
     muted = false;
     rl.output.write(question);
     muted = true;
-    const answer = queued.length > 0 ? Promise.resolve(queued.shift())
-      : new Promise((resolve) => { waiting = resolve; });
+    const answer =
+      queued.length > 0
+        ? Promise.resolve(queued.shift())
+        : new Promise((resolve) => {
+            waiting = resolve;
+          });
     return answer.then((value) => {
       rl.output.write('\n');
       return value;

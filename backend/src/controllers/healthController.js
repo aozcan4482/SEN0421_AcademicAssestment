@@ -11,7 +11,7 @@ async function check(req, res) {
   try {
     await db.query('SELECT 1');
     res.json({ status: 'ok', database: 'up', time: new Date().toISOString() });
-  } catch (err) {
+  } catch {
     res.status(503).json({ status: 'degraded', database: 'down', time: new Date().toISOString() });
   }
 }

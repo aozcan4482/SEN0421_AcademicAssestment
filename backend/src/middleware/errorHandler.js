@@ -14,7 +14,6 @@ function notFound(req, res, next) {
  * receives a generic message - internal details (SQL, stack traces) are never
  * sent over the network.
  */
-// eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
