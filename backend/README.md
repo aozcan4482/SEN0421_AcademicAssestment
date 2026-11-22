@@ -84,8 +84,31 @@ signs in with that password. The server refuses to start in mock mode when
 | POST | `/api/auth/login` | Public | `{ username, password }` → `{ token, user }` |
 | GET | `/api/auth/me` | Signed in | Profile of the signed-in user |
 | GET | `/api/criteria` | Signed in | Evaluation criteria and their weights |
+| GET | `/api/jury/projects` | Jury | Projects assigned to the jury member, with member progress |
+| GET | `/api/jury/projects/:projectId` | Jury (assigned) | Project, criteria and the jury member's own scores per student |
+| PUT | `/api/jury/projects/:projectId/students/:studentId/evaluation` | Jury (assigned) | Save a student's scores as draft, or submit them with `"submit": true` |
 | GET | `/api/admin/audit-log` | Admin | Audit entries, newest first (`?limit=&before=`) |
 | GET | `/api/admin/audit-log/verify` | Admin | Recomputes the hash chain; `intact: false` reveals tampering |
+
+### Score entry
+
+```json
+PUT /api/jury/projects/1/students/4/evaluation
+{
+  "scores": [
+    { "criteria_id": 1, "score": 85, "comment": "Solid architecture" },
+    { "criteria_id": 2, "score": 90 }
+  ],
+  "submit": false
+}
+```
+
+- Scores are whole numbers from 0 to 100; each student is scored individually.
+- Drafts can be saved repeatedly. Submitting requires a score for every
+  criterion; submitted scores are locked (`409 Conflict` on further changes).
+- When a jury member has submitted every student, their assignment is marked
+  completed; when all assigned jury members have completed, the project
+  status becomes `Completed`.
 
 Errors are always returned as `{ "error": "<message>" }`. Internal details
 (SQL errors, stack traces) are logged on the server and never sent to the client.

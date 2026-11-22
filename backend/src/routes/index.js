@@ -11,6 +11,7 @@ const criteriaController = require('../controllers/criteriaController');
 const authenticate = require('../middleware/authenticate');
 const authRoutes = require('./auth.routes');
 const adminRoutes = require('./admin.routes');
+const juryRoutes = require('./jury.routes');
 
 const router = express.Router();
 
@@ -21,5 +22,6 @@ router.use('/auth', authRoutes);
 // Authenticated
 router.get('/criteria', authenticate, criteriaController.list);
 router.use('/admin', adminRoutes);
+router.use('/jury', juryRoutes);
 
 module.exports = router;
